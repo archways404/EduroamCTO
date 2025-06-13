@@ -6,9 +6,9 @@
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1",
 		"postinstall": "rm -f node_modules/undici/lib/cache/sqlite-cache-store.js",
-		"build:macos-arm": "pkg . --targets node18-macos-arm64 --output dist/eduroam-cto-macos-arm64",
-		"build:macos-intel": "pkg . --targets node18-macos-x64 --output dist/eduroam-cto-macos-x64",
-		"build:windows": "pkg . --targets node18-win-x64 --output dist/eduroam-cto-win-x64.exe",
+		"build:windows": "pkg . --targets node18-win-x64 --output dist/eduroam-cto-win-x64.exe && zip -j dist/eduroam-cto-win-x64.zip dist/eduroam-cto-win-x64.exe",
+		"build:macos-arm": "pkg . --targets node18-macos-arm64 --output dist/eduroam-cto-macos-arm64 && zip -j dist/eduroam-cto-macos-arm64.zip dist/eduroam-cto-macos-arm64",
+		"build:macos-intel": "pkg . --targets node18-macos-x64 --output dist/eduroam-cto-macos-x64 && zip -j dist/eduroam-cto-macos-x64.zip dist/eduroam-cto-macos-x64",
 		"build": "npm run build:macos-arm && npm run build:macos-intel && npm run build:windows"
 	},
 	"dependencies": {
