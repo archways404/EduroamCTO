@@ -215,7 +215,8 @@ async function run() {
 			process.exit(1);
 		}
 
-		console.clear();
+		if (platform === 'darwin') console.clear();
+		
 		console.log('Available Accounts:\n');
 		accounts.forEach((acc, i) => {
 			console.log(`  [${i + 1}] ${acc.device}\n      ↳ ${acc.username}  --  ${acc.password}`);
