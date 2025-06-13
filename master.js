@@ -1,5 +1,3 @@
-#!/usr/bin/env node
-
 const puppeteer = require('puppeteer');
 const fs = require('fs');
 const plist = require('plist');
@@ -8,6 +6,7 @@ const { execSync } = require('child_process');
 const readline = require('readline');
 const path = require('path');
 const os = require('os');
+const tty = require('tty');
 
 const INPUT_SIGNED = 'Eduroam-MAU.mobileconfig';
 const EXTRACTED_XML = 'Eduroam.xml';
@@ -15,17 +14,57 @@ const OUTPUT_PROFILE = 'Eduroam-Updated.mobileconfig';
 const MOBILECONFIG_URL =
 	'https://cat.eduroam.org/user/API.php?action=downloadInstaller&lang=en&profile=2205&device=apple_global&generatedfor=user&openroaming=0';
 
-const rl = readline.createInterface({
-	input: process.stdin,
-	output: process.stdout,
-});
-
 const platform = os.platform();
 const arch = os.arch();
 
-function promptCredentials() {
+function promptHidden(query) {
 	return new Promise((resolve) => {
-		rl.question('Enter your MAU username (e.g. ab1234): ', (user) => {
+		const stdin = process.stdin;
+		const stdout = process.stdout;
+		stdin.resume();
+		stdin.setRawMode(true);
+		stdin.setEncoding('utf8');
+
+		let password = '';
+		stdout.write(query);
+
+		const onData = (char) => {
+			char = char.toString();
+
+			if (char === '\n' || char === '\r' || char === '\u0004') {
+				stdout.write('\n');
+				stdin.setRawMode(false);
+				stdin.pause();
+				stdin.removeListener('data', onData); // 🛠️ FIXED: Cleanup to prevent ghost input
+				resolve(password);
+			} else if (char === '\u0003') {
+				process.exit(); // Ctrl+C
+			} else if (char === '\u007f') {
+				// Backspace
+				if (password.length > 0) {
+					password = password.slice(0, -1);
+					stdout.clearLine(0);
+					stdout.cursorTo(0);
+					stdout.write(query + '*'.repeat(password.length));
+				}
+			} else {
+				password += char;
+				stdout.write('*');
+			}
+		};
+
+		stdin.on('data', onData);
+	});
+}
+
+function promptCredentials() {
+	const rl = readline.createInterface({
+		input: process.stdin,
+		output: process.stdout,
+	});
+	return new Promise((resolve) => {
+		rl.question('Enter your MAU username (e.g. ab1234): ', async (user) => {
+			rl.close();
 			const trimmed = user.trim();
 			if (!/^[a-zA-Z0-9]{5,}$/.test(trimmed)) {
 				console.error(
@@ -33,9 +72,9 @@ function promptCredentials() {
 				);
 				process.exit(1);
 			}
-			rl.question('Enter your password: ', (pass) => {
-				resolve({ username: `${trimmed}@mau.se`, password: pass.trim() });
-			});
+
+			const pass = await promptHidden('Enter your password: ');
+			resolve({ username: `${trimmed}@mau.se`, password: pass });
 		});
 	});
 }
@@ -51,9 +90,7 @@ async function getAccountsFromPortal(USERNAME, PASSWORD) {
 	const browser = await getBrowser();
 	const page = await browser.newPage();
 
-	const LOGIN_URL = 'https://ids.mau.se/';
-
-	await page.goto(LOGIN_URL, { waitUntil: 'networkidle2' });
+	await page.goto('https://ids.mau.se/', { waitUntil: 'networkidle2' });
 	await page.click('a.index-button');
 	await page.waitForSelector('#userNameInput');
 	await page.type('#userNameInput', USERNAME, { delay: 50 });
@@ -168,9 +205,7 @@ function writeWindowsProfile(username, password) {
 
 async function run() {
 	try {
-		if (platform === 'darwin') {
-			await downloadMobileconfig();
-		}
+		if (platform === 'darwin') await downloadMobileconfig();
 
 		const creds = await promptCredentials();
 		const accounts = await getAccountsFromPortal(creds.username, creds.password);
@@ -180,12 +215,14 @@ async function run() {
 			process.exit(1);
 		}
 
-		console.log('\nAvailable Accounts:\n');
+		console.clear();
+		console.log('Available Accounts:\n');
 		accounts.forEach((acc, i) => {
-			console.log(`${i + 1}. Device: ${acc.device}`);
-			console.log(`   Username: ${acc.username}`);
+			console.log(`  [${i + 1}] ${acc.device}\n      ↳ ${acc.username}  --  ${acc.password}`);
+			console.log(' ');
 		});
 
+		const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 		rl.question('\nEnter the number of the account to use: ', (choice) => {
 			const index = parseInt(choice.trim()) - 1;
 			if (index < 0 || index >= accounts.length) {
@@ -197,7 +234,7 @@ async function run() {
 			const { username, password } = accounts[index];
 
 			if (platform === 'darwin') {
-				console.log('🍏 macOS detected.');
+				console.log('macOS detected.');
 				execSync(`security cms -D -i ${INPUT_SIGNED} -o ${EXTRACTED_XML}`);
 				execSync(`plutil -lint ${EXTRACTED_XML}`);
 				const xmlContent = fs.readFileSync(EXTRACTED_XML, 'utf8');
@@ -209,12 +246,8 @@ async function run() {
 				execSync(`open "x-apple.systempreferences:com.apple.configurationprofiles"`);
 			} else if (platform === 'win32') {
 				console.log('🪟 Windows detected.');
-
-				// 1. Write and import the XML profile (username/password will be ignored)
 				const profilePath = writeWindowsProfile(username, password);
 				execSync(`netsh wlan add profile filename="${profilePath}"`);
-
-				// 2. Connect and inject credentials using rasdial
 				try {
 					execSync(`rasdial eduroam "${username}" "${password}"`);
 					console.log('✅ Connected using rasdial.');
@@ -227,8 +260,19 @@ async function run() {
 				console.error(`❌ Unsupported platform: ${platform}`);
 				process.exit(1);
 			}
-
 			rl.close();
+			// Cleanup temporary files
+			const cleanupFiles = [INPUT_SIGNED, EXTRACTED_XML, OUTPUT_PROFILE, 'eduroam-profile.xml'];
+			cleanupFiles.forEach((file) => {
+				const fullPath = path.resolve(__dirname, file);
+				if (fs.existsSync(fullPath)) {
+					try {
+						fs.unlinkSync(fullPath);
+					} catch (e) {
+						console.warn(`⚠️ Could not delete ${file}: ${e.message}`);
+					}
+				}
+			});
 		});
 	} catch (err) {
 		console.error(`❌ Error: ${err.message}`);
