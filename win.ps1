@@ -6,27 +6,29 @@ $downloadPath = "$env:TEMP\$binary"
 
 Write-Host "📦 Downloading $binary..."
 
-$webClient = New-Object System.Net.WebClient
+# Create the request and get the total size
+$response = Invoke-WebRequest -Uri $downloadUrl -Method Head
+$totalBytes = [int64]$response.Headers["Content-Length"]
 
-# Register a progress bar
-$webClient.DownloadProgressChanged += {
-    $percent = $_.ProgressPercentage
+# Download with manual progress bar
+$reader = [System.Net.HttpWebRequest]::Create($downloadUrl)
+$responseStream = $reader.GetResponse().GetResponseStream()
+$fileStream = [System.IO.File]::Create($downloadPath)
+
+$buffer = New-Object byte[] 8192
+$bytesRead = 0
+$totalRead = 0
+
+while (($bytesRead = $responseStream.Read($buffer, 0, $buffer.Length)) -gt 0) {
+    $fileStream.Write($buffer, 0, $bytesRead)
+    $totalRead += $bytesRead
+    $percent = [math]::Round(($totalRead / $totalBytes) * 100)
     Write-Progress -Activity "Downloading..." -Status "$percent% Complete" -PercentComplete $percent
 }
 
-# Start async download
-$downloadComplete = $false
-$webClient.DownloadFileCompleted += {
-    Write-Host "`n✅ Download completed."
-    $downloadComplete = $true
-}
+$fileStream.Close()
+$responseStream.Close()
 
-$webClient.DownloadFileAsync($downloadUrl, $downloadPath)
-
-# Wait for download to finish
-while (-not $downloadComplete) {
-    Start-Sleep -Milliseconds 100
-}
-
+Write-Host "`n✅ Download complete."
 Write-Host "🚀 Running $binary..."
 Start-Process -FilePath $downloadPath -Wait
