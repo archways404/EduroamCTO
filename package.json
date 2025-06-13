@@ -1,0 +1,40 @@
+{
+	"name": "eduroam-cto",
+	"version": "0.0.1",
+	"description": "",
+	"bin": "master.js",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1",
+		"postinstall": "rm -f node_modules/undici/lib/cache/sqlite-cache-store.js",
+		"build:macos-arm": "pkg . --targets node18-macos-arm64 --output dist/eduroam-cto-macos-arm64",
+		"build:macos-intel": "pkg . --targets node18-macos-x64 --output dist/eduroam-cto-macos-x64",
+		"build:windows": "pkg . --targets node18-win-x64 --output dist/eduroam-cto-win-x64.exe",
+		"build": "npm run build:macos-arm && npm run build:macos-intel && npm run build:windows"
+	},
+	"dependencies": {
+		"plist": "^3.1.0",
+		"puppeteer": "^24.10.1"
+	},
+	"pkg": {
+		"scripts": [
+			"master.js"
+		],
+		"assets": [
+			"node_modules/puppeteer/.local-chromium/**/*"
+		],
+		"ignore": [
+			"node_modules/undici/lib/cache/sqlite-cache-store.js"
+		]
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/archways404/EduroamCTO.git"
+	},
+	"keywords": [],
+	"author": "",
+	"license": "ISC",
+	"bugs": {
+		"url": "https://github.com/archways404/EduroamCTO/issues"
+	},
+	"homepage": "https://github.com/archways404/EduroamCTO#readme"
+}
