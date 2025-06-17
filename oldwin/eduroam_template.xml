@@ -1,0 +1,53 @@
+<?xml version="1.0"?>
+<WLANProfile xmlns="http://www.microsoft.com/networking/WLAN/profile/v1">
+  <name>eduroam</name>
+  <SSIDConfig>
+    <SSID>
+      <name>eduroam</name>
+    </SSID>
+    <nonBroadcast>false</nonBroadcast>
+  </SSIDConfig>
+  <connectionType>ESS</connectionType>
+  <connectionMode>auto</connectionMode>
+  <MSM>
+    <security>
+      <authEncryption>
+        <authentication>WPA2</authentication>
+        <encryption>AES</encryption>
+        <useOneX>true</useOneX>
+      </authEncryption>
+      <OneX xmlns="http://www.microsoft.com/networking/OneX/v1">
+        <EAPConfig>
+          <EapHostConfig xmlns="http://www.microsoft.com/provisioning/EapHostConfig">
+            <EapMethod>
+              <Type>25</Type>
+              <VendorId>0</VendorId>
+              <VendorType>0</VendorType>
+              <AuthorId>0</AuthorId>
+            </EapMethod>
+            <Config>
+              <Eap xmlns="http://www.microsoft.com/provisioning/BaseEapConnectionPropertiesV1">
+                <Type>25</Type>
+                <EapType xmlns="http://www.microsoft.com/provisioning/EapPeapConnectionPropertiesV1">
+                  <ServerValidation>
+                    <DisableUserPromptForServerValidation>true</DisableUserPromptForServerValidation>
+                    <ServerNames>eduroam.mau.se</ServerNames>
+                  </ServerValidation>
+                  <FastReconnect>true</FastReconnect>
+                  <InnerEapOptional>false</InnerEapOptional>
+                  <Eap xmlns="http://www.microsoft.com/provisioning/BaseEapConnectionPropertiesV1">
+                    <Type>26</Type>
+                    <EapType xmlns="http://www.microsoft.com/provisioning/EapMsChapv2ConnectionPropertiesV1">
+                      <Username>__USERNAME__</Username>
+                      <UseWinLogonCredentials>false</UseWinLogonCredentials>
+                    </EapType>
+                  </Eap>
+                </EapType>
+              </Eap>
+            </Config>
+          </EapHostConfig>
+        </EAPConfig>
+      </OneX>
+    </security>
+  </MSM>
+</WLANProfile>

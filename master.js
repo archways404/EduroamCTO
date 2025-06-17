@@ -247,7 +247,24 @@ async function run() {
 				execSync(`open "x-apple.systempreferences:com.apple.configurationprofiles"`);
 			} else if (platform === 'win32') {
 				console.log('🪟 Windows detected.');
+
+				const psScript = path.join(__dirname, 'windows/install_eduroam.ps1');
+				const escapedUsername = username.replace(/"/g, '\\"');
+				const escapedPassword = password.replace(/"/g, '\\"');
+
+				const cmd = `powershell -ExecutionPolicy Bypass -File "${psScript}" -Username "${escapedUsername}" -Password "${escapedPassword}"`;
+
+				try {
+					execSync(cmd, { stdio: 'inherit' });
+					console.log('✅ PowerShell script executed successfully.');
+				} catch (e) {
+					console.error(`❌ PowerShell script failed: ${e.message}`);
+				}
+
+				/*
 				const profilePath = writeWindowsProfile(username, password);
+
+
 				execSync(`netsh wlan add profile filename="${profilePath}"`);
 				try {
 					execSync(`rasdial eduroam "${username}" "${password}"`);
@@ -257,6 +274,8 @@ async function run() {
 						'❌ Failed to connect with rasdial. Make sure the profile was added and Wi-Fi is on.'
 					);
 				}
+				
+				*/
 			} else {
 				console.error(`❌ Unsupported platform: ${platform}`);
 				process.exit(1);

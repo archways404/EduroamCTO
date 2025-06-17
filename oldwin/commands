@@ -1,0 +1,19 @@
+eduroam.exe eduroam@mau.se MySecurePassword123
+
+
+
+todo:
+
+openssl x509 -in "GEANT_OV_RSA_CA_2.pem" -noout -fingerprint -sha1
+
+<TrustedRootCA>
+  <TrustedRootCAName>‎<insert SHA1 fingerprint here></TrustedRootCAName>
+</TrustedRootCA>
+
+
+
+
+<TrustedRootCA>
+  <TrustedRootCAName>‎11 22 33 44 ...</TrustedRootCAName>
+  <TrustedRootCAName>‎AA BB CC DD ...</TrustedRootCAName>
+</TrustedRootCA>

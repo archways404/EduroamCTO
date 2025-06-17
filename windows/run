@@ -1,0 +1,5 @@
+.\install_eduroam.ps1 -Username "ak1234@mau.se" -Password "SuperSecret123!"
+
+
+
+netsh wlan show profile name="eduroam" key=clear
